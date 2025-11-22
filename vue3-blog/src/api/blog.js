@@ -22,5 +22,6 @@ export async function updateBlog(blogId, blogData) {
 }
 
 export function searchBlogs(params) {
+  console.log('API call to searchBlogs with params:', params)
   return api.get('/search/blogs', { params })
 }

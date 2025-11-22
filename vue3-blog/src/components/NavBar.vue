@@ -160,6 +160,7 @@ const userInitial = computed(() => {
 const searchQuery = ref('')
 function handleSearch() {
   const query = searchQuery.value.trim()
+  console.log("Searching for:", query)
   if (query) {
     router.push({ path: '/search', query: { q: query } }).catch(()=>{})
     searchQuery.value = ''

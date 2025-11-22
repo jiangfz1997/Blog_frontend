@@ -93,34 +93,38 @@ const currentPage = computed({
 
 // 1. 根据 URL 参数执行搜索
 const performSearchFromRoute = () => {
+  // 从浏览器地址栏获取参数
   const q = route.query.q || ''
-  const tag = route.query.tag || ''
   const page = Number(route.query.page) || 1
+  const size = Number(route.query.size) || 10
 
-  // 同步 URL 参数到输入框显示 (用户体验优化)
-  if (q) searchInput.value = q
-  if (tag) searchInput.value = `#${tag}`
+  // 这里的 searchInput 只是为了回显给用户看
+  searchInput.value = q 
 
-  // 调用后端 API
-  executeSearch({ q, tag, page })
+  // 调用 Composable (useSearch.js)
+  // 我们统一用 'q' 代表搜索词，把脏活留给 API 层去处理
+  executeSearch({ q, page, size })
 }
 
-// 2. 用户点击搜索按钮 -> 修改 URL
+// 2. 触发搜索 (用户输入 -> 推送 URL)
 const triggerSearch = () => {
-  // 逻辑：如果是 # 开头，搜 tag，否则搜 q
   const val = searchInput.value.trim()
-  const query = {}
   
-  if (val.startsWith('#')) {
-    query.tag = val.slice(1)
-  } else {
-    query.q = val
-  }
-  
-  // 重置回第 1 页
-  router.push({ path: '/search', query: { ...query, page: 1 } })
-}
+  if (!val) return
 
+  // 简化逻辑：
+  // 不管是不是 # 开头，都把它当做 q (Query) 放到 URL 里
+  // 这样 URL 就是 /search?q=%23javascript (即 #javascript)
+  // 或者 /search?q=vue
+  router.push({ 
+    path: '/search', 
+    query: { 
+      q: val, 
+      page: 1,
+      size: 10
+    } 
+  })
+}
 // 3. 用户点击分页 -> 修改 URL
 const handlePageChange = (newPage) => {
   router.push({
