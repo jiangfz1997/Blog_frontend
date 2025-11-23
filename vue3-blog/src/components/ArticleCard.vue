@@ -54,6 +54,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { NCard, NTag, NSpace, NAvatar } from 'naive-ui'
+import { onMounted } from 'vue'
 
 const props = defineProps({
   post: { type: Object, required: true }
@@ -72,4 +73,5 @@ const getSummary = (content) => {
   const text = content.replace(/<[^>]+>/g, '')
   return text.length > 100 ? text.substring(0, 100) + '...' : text
 }
+
 </script>

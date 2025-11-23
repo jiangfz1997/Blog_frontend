@@ -1,215 +1,167 @@
 <template>
-  <DefaultLayout>
-    <template #main>
-      <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-        <h1 class="text-2xl font-semibold mb-6">
-          {{ isEditing ? 'Edit Blog' : 'Write a New Blog' }}
-        </h1>
-
-        <div class="mb-4">
-          <label class="block text-gray-700 font-medium mb-2">Title</label>
-          <input
-            v-model="title"
-            type="text"
-            placeholder="Enter your blog title"
-            class="w-full border border-gray-300 rounded-md p-2 focus:ring focus:ring-blue-100 focus:border-blue-400 outline-none"
-          />
+  <div class="min-h-screen bg-gray-50 flex flex-col">
+    
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-200 shadow-sm">
+      <div class="w-full max-w-[1920px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <n-button text @click="router.push('/')" class="text-gray-500 hover:text-gray-800">
+            <template #icon>←</template>
+            Back
+          </n-button>
+          <div class="h-4 w-px bg-gray-300 mx-2"></div>
+          <span class="text-lg">📝</span>
+          <span class="font-semibold text-gray-700">{{ isEditing ? 'Editing Post' : 'New Draft' }}</span>
         </div>
 
-        <!-- <div class="mb-4">
-          <label class="block text-gray-700 font-medium mb-2">Tags (comma separated)</label>
-          <input
-            v-model="tagsInput"
-            type="text"
-            placeholder="e.g. vue, frontend, javascript"
-            class="w-full border border-gray-300 rounded-md p-2 focus:ring focus:ring-blue-100 focus:border-blue-400 outline-none"
-          />
-        </div> -->
-        <div class="mb-4">
-        <label class="block text-gray-700 font-medium mb-2">Tags</label>
-
-          <!-- Tags 显示区 -->
-          <div class="flex flex-wrap gap-2 mb-2">
-            <span
-              v-for="(tag, index) in tags"
-              :key="index"
-              class="bg-blue-100 text-blue-700 px-2 py-1 rounded-md flex items-center gap-1"
-            >
-              {{ tag }}
-              <button
-                @click="removeTag(index)"
-                class="text-blue-500 hover:text-blue-700"
-              >
-                x
-              </button>
-            </span>
-          </div>
-
-          <!-- 限制提示 -->
-          <p v-if="errorMessage" class="text-red-500 text-sm mb-1">
-            {{ errorMessage }}
-          </p>
-
-          <!-- 输入框 -->
-          <input
-            v-model="tagInput"
-            @keyup.enter="addTag"
-            type="text"
-            placeholder="Press Enter to add tag"
-            class="w-full border rounded-md p-2 outline-none
-              border-gray-300 focus:border-blue-400 focus:ring-blue-100
-              transition-all"
-            :class="{
-              'border-red-500 focus:border-red-500': errorMessage
-            }"
-          />
-        </div>
-
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-gray-700 font-medium mb-2">Content (Markdown)</label>
-            <textarea
-              v-model="content"
-              rows="15"
-              placeholder="Write your markdown content here..."
-              class="w-full border border-gray-300 rounded-md p-2 font-mono focus:ring focus:ring-blue-100 focus:border-blue-400 outline-none resize-y"
-            ></textarea>
-          </div>
-
-          <div>
-            <label class="block text-gray-700 font-medium mb-2">Preview</label>
-            <div
-              class="prose max-w-none border border-gray-200 rounded-md p-4 bg-gray-50 overflow-auto"
-              v-html="renderedMarkdown"
-            ></div>
-          </div>
-        </div>
-
-        <div class="flex justify-end mt-6 gap-3">
-          <button
-            @click="saveDraft"
-            class="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100 transition"
-          >
-            Save Draft
-          </button>
-          <button
-            @click="publish"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition"
-          >
-            {{ isEditing ? 'Update' : 'Publish' }}
-          </button>
+        <div class="flex gap-3">
+          <span v-if="loading" class="text-xs text-gray-400 flex items-center mr-2">Saving...</span>
+          <!-- <n-button @click="saveDraft" secondary size="medium">Save draft</n-button> -->
+          <n-button type="primary" @click="publish" :loading="loading" size="medium">Publish</n-button>
         </div>
       </div>
-    </template>
-  </DefaultLayout>
+    </header>
+
+    <main class="flex-1 w-full max-w-screen-2xl mx-auto px-6 py-8">
+      
+      <div class="mb-6 max-w-4xl text-[30px]"> <input
+          v-model="title"
+          type="text"
+          placeholder="Enter your post title..."
+          class="w-full text-9xl font-extrabold text-gray-900 placeholder:text-gray-300 bg-transparent border-none outline-none p-0 focus:ring-0 leading-tight"
+        />
+      </div>
+
+      <div class="mb-6">
+         <n-dynamic-tags v-model:value="tags" :max="6" size="large" />
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm editor-wrapper">
+        <MdEditor 
+          v-model="content" 
+          language="en-US"
+          :preview="true"
+          :toolbarsExclude="['github', 'save']"
+          class="custom-editor" 
+          previewTheme="github"
+          :style="{ height: 'calc(100vh - 250px)' }" 
+        />
+        </div>
+
+    </main>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { marked } from 'marked'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import api from '@/services/api.js'
-import { updateBlog, publishBlog } from '../api/blog'
+import { updateBlog, publishBlog } from '@/api/blog' 
+import { MdEditor } from 'md-editor-v3'
+import 'md-editor-v3/lib/style.css'
+import { NInput, NButton, NDynamicTags } from 'naive-ui'
+import { getBlog } from '@/api/blog'
 
 const route = useRoute()
 const router = useRouter()
-
+const message = useMessage() 
 const isEditing = ref(!!route.params.id)
-
+const loading = ref(false)
 const title = ref('')
 const content = ref('')
-const tags = ref([]);
-const tagInput = ref("");
-const renderedMarkdown = computed(() => marked.parse(content.value))
-const errorMessage = ref("");
+const tags = ref([]) 
 
-onMounted(() => {
+onMounted(async () => {
   if (isEditing.value) {
+
     const id = route.params.id
-    console.log(`📝 Editing blog #${id}`)
-    title.value = 'Understanding Vue Lifecycle'
-    content.value = '## Lifecycle Hooks\n\nVue has several lifecycle hooks you can use...'
-    tagsInput.value = 'vue, frontend'
+
+    try {
+      const blogData = await getBlog(id)      
+      title.value = blogData.title
+      content.value = blogData.content
+      tags.value = blogData.tags || []
+    } catch (e) {
+      message.error('Failed to load blog data')
+    }
+
+  } else {
+    const draft = localStorage.getItem('blog-draft')
+    if (draft) {
+      const confirmLoad = confirm('Found a draft. Do you want to load it?')
+      if (confirmLoad) {
+        const d = JSON.parse(draft)
+        title.value = d.title
+        content.value = d.content
+        tags.value = d.tags || []
+      }
+    }
   }
 })
 
-const MAX_TAGS = 6;
-const MAX_TAG_LENGTH = 30;
 
-const addTag = () => {
-  const value = tagInput.value.trim();
-
-  if (!value) {
-    errorMessage.value = "";
-    return;
-  }
-
-  if (value.length > MAX_TAG_LENGTH) {
-    errorMessage.value = `Each tag must be ≤ ${MAX_TAG_LENGTH} characters`;
-    return;
-  }
-
-  if (tags.value.length >= MAX_TAGS) {
-    errorMessage.value = `Maximum ${MAX_TAGS} tags allowed`;
-    return;
-  }
-
-  if (tags.value.includes(value)) {
-    errorMessage.value = "Duplicate tag";
-    return;
-  }
-
-  tags.value.push(value);
-  tagInput.value = "";
-  errorMessage.value = "";
-};
-
-const removeTag = (index) => {
-  tags.value.splice(index, 1);
-  errorMessage.value = ""; // 删除时清理错误
-};
 function saveDraft() {
-  localStorage.setItem(
-    'blog-draft',
-    JSON.stringify({
-      title: title.value,
-      content: content.value,
-      tags: tagsInput.value,
-    })
-  )
-  alert('Draft saved locally!')
+  localStorage.setItem('blog-draft', JSON.stringify({
+    title: title.value,
+    content: content.value,
+    tags: tags.value,
+  }))
+  message.success('Draft saved locally')
 }
 
+
 const publish = async () => {
+
+  if (!title.value.trim()) return message.warning('Title is required')
+
+  if (!content.value.trim()) return message.warning('Content is required')
+  loading.value = true
   const blogData = {
     title: title.value,
     content: content.value,
     tags: tags.value,
   }
-  
-  if (isEditing.value) {
-    console.log('Updating blog:', blogData)
-    const res = await updateBlog(blogData.id, blogData)
-    if (!res) {
-      alert('Failed to publish blog')
-      return
+
+  try {
+    let res;
+    if (isEditing.value) {
+      res = await updateBlog(route.params.id, blogData)
+
+    } else {
+      res = await publishBlog(blogData)
     }
-    var id = res.id
-    // alert('Blog published (mock)')
-    router.push(`/blog/${id}`)
-  } else {
-    console.log('Created new blog:', blogData)
-    const res = await publishBlog(blogData)
-    if (!res) {
-      alert('Failed to publish blog')
-      return
-    }
-    var id = res.id
-    // alert('Blog published (mock)')
-    router.push(`/blog/${id}`)
+    message.success(isEditing.value ? 'Updated successfully!' : 'Published successfully!')
+    localStorage.removeItem('blog-draft')
+    const newId = res?.id || route.params.id 
+    router.push(`/blog/${newId}`)
+
+  } catch (e) {
+    console.error(e)
+    message.error('Operation failed')
+  } finally {
+    loading.value = false
   }
-  
 }
 </script>
+
+<style scoped>
+:deep(.md-editor) {
+  background-color: #ffffff !important;
+  border: none !important;
+  border-radius: 12px;
+}
+
+:deep(.md-editor-toolbar-wrapper) {
+  border-bottom: 1px solid #f3f4f6 !important;
+  padding: 6px 12px !important;
+}
+
+:deep(.md-editor-fullscreen) {
+  z-index: 9999 !important;
+  top: 0 !important;
+}
+
+:deep(.md-editor-content) {
+  background-color: transparent !important;
+}
+</style>

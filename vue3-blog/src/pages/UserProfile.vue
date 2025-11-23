@@ -44,7 +44,7 @@
         <h2 class="text-xl font-bold border-l-4 border-blue-500 pl-3">
           {{ isOwner ? 'My Posts' : 'Posts' }}
         </h2>
-        <button v-if="isOwner" class="text-sm text-blue-600 font-medium">+ New Draft</button>
+        <!-- <button v-if="isOwner" class="text-sm text-blue-600 font-medium">+ New Draft</button> -->
       </div>
 
       <div class="space-y-3">
@@ -80,7 +80,7 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PostCard from '@/components/PostCard.vue'
 
 import { getUserProfile } from '@/api/user.js'
-import { getBlogListByUserId } from '@/api/blog.js'
+import { getBlogListByUserId, deleteBlog } from '@/api/blog.js'
 import { useUserStore } from '@/store/userStore'
 import ProfilePostItem from '@/components/admin/ProfilePostItem.vue'
 const userStore = useUserStore()
@@ -99,9 +99,10 @@ const totalPosts = ref(0)
 const totalPages = ref(0)
 const blogs = ref([])
 const isOwner = computed(() => {
-
+  console.log("userStore.user:", userStore.user)
   if (!userStore.user) return false
-  return userStore.user.id === route.params.id
+  console.log("route.params.id:", route.params.id)
+  return userStore.user.id === route.params.userid
 })
 
 onMounted(async() => {
@@ -149,6 +150,14 @@ const saveProfile = () => {
 const goToBlog = (id) => {
   router.push(`/blog/${id}`)
 }
-const handleEdit = (id) => console.log('Edit', id)
-const handleDelete = (id) => console.log('Delete', id)
+const handleEdit = (id) => {
+  router.push(`/blog/edit/${id}`)
+}
+const handleDelete = async (id) => {
+  
+  const res = await deleteBlog(id)
+  alert('Post deleted successfully!')
+  await loadBlogs(userid.value, page.value, pageSize.value)
+
+}
 </script>

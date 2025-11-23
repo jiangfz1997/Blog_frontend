@@ -1,6 +1,6 @@
 // src/services/api.js
 import axios from 'axios'
-
+import qs from 'qs'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -10,6 +10,9 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
+  paramsSerializer: (params) => {
+    return qs.stringify(params, { arrayFormat: 'repeat' })
+  }
 })
 
 api.interceptors.response.use(

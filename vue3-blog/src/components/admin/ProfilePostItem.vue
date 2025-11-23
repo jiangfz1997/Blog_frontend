@@ -1,32 +1,80 @@
 <template>
-  <div class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition-colors group">
+  <div class="flex items-center justify-between p-5 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-blue-300 transition-all duration-300 group">
     
-    <div class="flex-1 min-w-0 mr-4"> <div class="flex items-center gap-2 mb-1">
+    <div class="flex-1 min-w-0 mr-6">
+      
+      <div class="flex items-center gap-3 mb-2">
         <h3 
-          class="text-lg font-semibold text-gray-800 truncate cursor-pointer hover:text-blue-600"
+          class="text-lg font-semibold text-gray-800 truncate cursor-pointer hover:text-blue-600 transition-colors"
           @click="goToDetail"
         >
           {{ post.title }}
         </h3>
-        <span class="px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">Published</span>
+        </div>
+
+      <div class="mb-3">
+        <n-space size="small">
+          <span v-if="!post.tags || post.tags.length === 0" class="text-xs text-gray-400">
+            No tags
+          </span>
+          
+          <n-tag 
+            v-for="tag in post.tags" 
+            :key="tag" 
+            type="info" 
+            size="small" 
+            bordered
+            class="opacity-90"
+          >
+            # {{ tag }}
+          </n-tag>
+        </n-space>
       </div>
       
-      <div class="flex items-center gap-3 text-xs text-gray-500">
-        <span>Created: {{ formatDate(post.created_at) }}</span>
-        <span>•</span>
-        <span class="flex gap-1">
-          <span v-for="tag in post.tags" :key="tag">#{{ tag }}</span>
+      <div class="flex items-center gap-4 text-xs text-gray-400">
+        <span>{{ formatDate(post.created_at) }}</span>
+        
+        <span class="w-[1px] h-3 bg-gray-300"></span> <span class="flex items-center gap-1">
+          👁️ {{ post.view_count || 0 }}
+        </span>
+        <span class="flex items-center gap-1">
+           ❤️ {{ post.like_count || 0 }}
+        </span>
+        <span class="flex items-center gap-1">
+          💬 {{ post.comments_count || 0 }}
         </span>
       </div>
     </div>
 
-      <div v-if="showActions" class="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-      <button @click.stop="$emit('edit', post.id)" class="px-3 py-1 text-sm text-blue-600 bg-blue-50 rounded hover:bg-blue-100">
+    <div v-if="showActions" class="flex items-center gap-3 shrink-0">
+      
+      <n-button 
+        size="small" 
+        secondary 
+        type="primary" 
+        @click.stop="$emit('edit', post.id)"
+      >
         Edit
-      </button>
-      <button @click.stop="$emit('delete', post.id)" class="px-3 py-1 text-sm text-red-600 bg-red-50 rounded hover:bg-red-100">
-        Delete
-      </button>
+      </n-button>
+
+      <n-popconfirm
+        @positive-click="handleDelete"
+        negative-text="Cancel"
+        positive-text="Confirm"
+      >
+        <template #trigger>
+          <n-button 
+            size="small" 
+            secondary 
+            type="error" 
+            @click.stop
+          >
+            Delete
+          </n-button>
+        </template>
+        Are you sure you want to delete this post?
+      </n-popconfirm>
+
     </div>
 
   </div>
@@ -34,14 +82,13 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { NTag, NSpace, NButton, NPopconfirm } from 'naive-ui'
 
 const props = defineProps({
   post: { type: Object, required: true },
   showActions: { type: Boolean, default: false }
-
 })
 
-// Define events for parent component to handle logic
 const emit = defineEmits(['edit', 'delete'])
 const router = useRouter()
 
@@ -49,8 +96,17 @@ const goToDetail = () => {
   router.push(`/blog/${props.post.id}`)
 }
 
+const handleDelete = () => {
+  emit('delete', props.post.id)
+}
+
+
 const formatDate = (iso) => {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  })
 }
 </script>

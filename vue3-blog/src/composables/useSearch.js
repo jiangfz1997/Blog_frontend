@@ -13,12 +13,16 @@ export function useSearch() {
     console.log('Executing search with params:',
         params
     )
+    console.log("params are:  ", params)
     try {
       // 1. 调用 API
       const apiParams = {
-        keyword: params.q || params.tag || '', 
+        keyword: params.q || '', 
+        tags: params.tags || [],
         page: params.page || 1,
-        size: pageSize
+        size: pageSize,
+        sort_by: params.sortBy || 'created',
+        sort_order: params.sortOrder || 'desc'
       }
       console.log('API search params:', apiParams)
       // 注意：这里得到的是后端原始返回 { blogs: { total: 3, items: [...] } }
@@ -36,16 +40,15 @@ export function useSearch() {
           created_at: item.created_at,
 
           // 缺失字段的“默认兜底值” (避免 ArticleCard 报错)
-          tags: [],                     // 后端没返回 tags，先给个空数组
+          tags: item.tags || [],                     // 后端没返回 tags，先给个空数组
           content: '',                  // 后端没返回 content，摘要会显示空
-          views: 0,                     // 假装 0 阅读
+          views: item.view_count || 0,                     // 假装 0 阅读
           likes: 0,                     // 假装 0 点赞
           comments_count: 0             // 假装 0 评论
         }))
 
         total.value = rawData.blogs.total
       } else {
-        // 防御性编程：万一结构不对
         results.value = []
         total.value = 0
       }

@@ -10,13 +10,14 @@
           </span>
         </div>
 
-        <div class="mb-8">
+        <div class="mb-4">
           <n-input-group>
             <n-input 
               v-model:value="searchInput" 
-              placeholder="Search blog title or tag..." 
+              placeholder="Type keyword (e.g. 'tutorial') or tag (e.g. '#python')..." 
               size="large"
               @keyup.enter="triggerSearch"
+              clearable 
             >
               <template #prefix>
                 <span class="text-gray-400">🔍</span>
@@ -26,6 +27,41 @@
               Search
             </n-button>
           </n-input-group>
+        </div>
+
+        <div v-if="hasActiveFilters" class="flex flex-wrap items-center gap-2 mb-8">
+          <span class="text-xs text-gray-500 mr-1 uppercase tracking-wide font-bold">Filters:</span>
+          
+          <n-tag 
+            v-if="currentKeyword" 
+            closable 
+            type="info" 
+            size="medium" 
+            @close="removeKeyword"
+          >
+            Keyword: {{ currentKeyword }}
+          </n-tag>
+
+          <n-tag 
+            v-for="tag in selectedTags" 
+            :key="tag" 
+            closable 
+            type="success" 
+            size="medium" 
+            @close="removeTag(tag)"
+          >
+            Tag: {{ tag }}
+          </n-tag>
+
+          <n-button 
+            text 
+            type="error" 
+            size="small" 
+            class="ml-2 underline" 
+            @click="clearAllFilters"
+          >
+            Clear All
+          </n-button>
         </div>
 
         <div v-if="loading" class="py-20 flex justify-center">
@@ -52,7 +88,7 @@
         <div v-else class="py-20">
           <n-empty description="No results found">
             <template #extra>
-              <span class="text-gray-400 text-sm">Try adjusting your search terms.</span>
+              <span class="text-gray-400 text-sm">Try removing some filters to see more results.</span>
             </template>
           </n-empty>
         </div>
@@ -65,73 +101,152 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-// 引入布局
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
-// 引入组件 (请确保这个文件是用 Naive UI 写的版本)
 import ArticleCard from '@/components/ArticleCard.vue'
-// 引入逻辑
 import { useSearch } from '@/composables/useSearch'
-// 引入 Naive UI 组件 (按需引入，如果没做自动引入配置的话)
-import { NInput, NInputGroup, NButton, NSpin, NPagination, NEmpty } from 'naive-ui'
+// 引入 NTag
+import { NInput, NInputGroup, NButton, NSpin, NPagination, NEmpty, NTag } from 'naive-ui'
 
 const route = useRoute()
 const router = useRouter()
 
-// 解构 Composable
-const { results, total, loading, pageSize, executeSearch } = useSearch()
-
-// 本地输入框状态
+// 状态定义
+const selectedTags = ref([])
+// 方便 UI 展示用的 currentKeyword，直接取 URL
+const currentKeyword = computed(() => route.query.q || '')
 const searchInput = ref('')
 
-// 当前页码 (从 URL 获取，如果 URL 没 page 参数则默认为 1)
+// 计算属性：是否有任何激活的过滤器
+const hasActiveFilters = computed(() => {
+  return !!currentKeyword.value || selectedTags.value.length > 0
+})
+
+const { results, total, loading, pageSize, executeSearch } = useSearch()
+
 const currentPage = computed({
   get: () => Number(route.query.page) || 1,
-  set: (val) => handlePageChange(val) // 双向绑定兼容
+  set: (val) => handlePageChange(val)
 })
 
 // --- 核心逻辑 ---
 
-// 1. 根据 URL 参数执行搜索
+// 1. 从 URL 同步状态并执行搜索
 const performSearchFromRoute = () => {
-  // 从浏览器地址栏获取参数
   const q = route.query.q || ''
   const page = Number(route.query.page) || 1
   const size = Number(route.query.size) || 10
-
-  // 这里的 searchInput 只是为了回显给用户看
+  
+  // 处理 Tags (兼容 string 和 array)
+  let tags = [];
+  const rawTags = route.query.tags;
+  if (Array.isArray(rawTags)) {
+    tags = rawTags;
+  } else if (rawTags) {
+    tags = [rawTags]; 
+  }
+  
+  // 回显状态
   searchInput.value = q 
-
-  // 调用 Composable (useSearch.js)
-  // 我们统一用 'q' 代表搜索词，把脏活留给 API 层去处理
-  executeSearch({ q, page, size })
+  selectedTags.value = tags;
+  
+  executeSearch({ q, tags, page, size })
 }
 
-// 2. 触发搜索 (用户输入 -> 推送 URL)
+// 2. 触发搜索 (搜索框回车或点击按钮)
+// 2. 触发搜索 (增量模式)
 const triggerSearch = () => {
   const val = searchInput.value.trim()
   
-  if (!val) return
+  if (!val) return // 空值不处理
 
-  // 简化逻辑：
-  // 不管是不是 # 开头，都把它当做 q (Query) 放到 URL 里
-  // 这样 URL 就是 /search?q=%23javascript (即 #javascript)
-  // 或者 /search?q=vue
+  // 获取当前状态的副本
+  let newTags = [...selectedTags.value]
+  let newKeyword = route.query.q || ''
+
+  // --- 逻辑分支 ---
+
+  // 场景 A: 用户输入了 Tag (以 # 开头)
+  if (val.startsWith('#')) {
+    // 去掉 # 号，拿到标签名
+    const tagName = val.slice(1).trim()
+    
+    if (tagName) {
+      // 避免重复添加
+      if (!newTags.includes(tagName)) {
+        newTags.push(tagName)
+      }
+    }
+  } 
+  // 场景 B: 用户输入了 Keyword
+  else {
+    // 增量逻辑：如果原来有词，就加空格拼在后面；如果没有，就直接赋值
+    // 例如：原来是 "python"，输入 "tutorial"，变成 "python tutorial"
+    if (newKeyword) {
+      newKeyword = `${newKeyword} ${val}`
+    } else {
+      newKeyword = val
+    }
+  }
+
+  // --- 推送 URL ---
   router.push({ 
     path: '/search', 
     query: { 
-      q: val, 
-      page: 1,
-      size: 10
+      ...route.query,
+      q: newKeyword || undefined, // 如果拼完是空的，移除参数
+      tags: newTags,              // 更新后的标签数组
+      page: 1                     // 只要改变条件，必须重置回第一页
     } 
   })
+
+  // 【体验优化】增量搜索通常在回车后清空输入框，方便输入下一个
+  searchInput.value = ''
 }
-// 3. 用户点击分页 -> 修改 URL
+
+// 3. 【新增】移除关键词
+const removeKeyword = () => {
+  searchInput.value = '' // 立即清空输入框 UI
+  router.push({
+    query: {
+      ...route.query,
+      q: undefined, // 移除 q 参数
+      page: 1
+    }
+  })
+}
+
+// 4. 【新增】移除单个 Tag
+const removeTag = (tagToRemove) => {
+  // 过滤掉点击的 tag
+  const newTags = selectedTags.value.filter(t => t !== tagToRemove)
+  
+  router.push({
+    query: {
+      ...route.query,
+      tags: newTags, // 更新 tags
+      page: 1
+    }
+  })
+}
+
+// 5. 【新增】清空所有
+const clearAllFilters = () => {
+  searchInput.value = ''
+  router.push({ 
+    path: '/search',
+    query: {
+      size: 10 // 重置回最纯净的状态
+    }
+  })
+}
+
 const handlePageChange = (newPage) => {
   router.push({
     path: '/search',
-    query: { ...route.query, page: newPage } // 保留现有查询条件，只改页码
+    query: { ...route.query, page: newPage }
   })
-  // Naive UI 的 Pagination 会自动滚动到顶部吗？如果没有，可以手动加 window.scrollTo(0,0)
+  // 建议加上滚动回顶部，提升体验
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // --- 生命周期 ---
@@ -140,7 +255,6 @@ onMounted(() => {
   performSearchFromRoute()
 })
 
-// 监听路由变化 (点击 Tag、点击分页、浏览器的后退按钮都会触发)
 watch(() => route.query, () => {
   performSearchFromRoute()
 })

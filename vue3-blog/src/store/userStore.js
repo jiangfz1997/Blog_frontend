@@ -89,18 +89,12 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    /**
-     * Handle user logout
-     * Ideally, call the backend to clear the cookie/session
-     */
     async logout() {
       try {
-        // Optional: Call backend logout endpoint if exists
-        // await api.post('/users/logout')
+        await api.post('/users/logout')
       } catch (err) {
         console.error('Logout warning:', err)
       } finally {
-        // Always clear client-side state
         this.user = null
         this.error = null
       }

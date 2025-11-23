@@ -21,7 +21,31 @@ export async function updateBlog(blogId, blogData) {
   return await api.patch(`/blogs/${blogId}`, blogData)
 }
 
-export function searchBlogs(params) {
+export async function searchBlogs(params) {
   console.log('API call to searchBlogs with params:', params)
-  return api.get('/search/blogs', { params })
+  return await api.get('/search/blogs', { params })
+}
+
+export async  function deleteBlog(blogId) { {
+  return await api.delete(`/blogs/${blogId}`)
+} }
+export async function getHotTags(limit=10) {
+  return await api.get("/blogs/tags/hottest", {
+    params: {limit}
+  })
+}
+
+export async function getHotViewedBlogs(limit=5) {
+  return await api.get("/blogs/views/hottest", {
+    params: {limit}
+  })
+}
+export async function toggleLikeBlog(blogId) {
+  return await api.post(`/blogs/${blogId}/like`)
+}
+
+export async function getDiscoverFeed(page=1,size=5) {
+  return await api.get("/search/discover", {
+    params: {page, size}
+  })
 }
