@@ -40,3 +40,19 @@ export function formatDate(isoString) {
     day: '2-digit'
   })
 }
+
+export async function getMoreReplies(rootId, page=1, size=5) {
+  return await api.get(`/comments/root/${rootId}/replies`, {
+    params: {
+      page,
+      size
+    }
+  })
+}
+
+export async function deleteComment(commentId, blogId) {
+  return await api.delete(`/comments/${commentId}`, {
+    params: { blog_id: blogId }
+  }
+  )
+}

@@ -33,7 +33,7 @@
           <n-avatar 
             round 
             size="small" 
-            :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author_username}`" 
+            :src="post.avatar_url" 
           />
           <span class="text-sm text-gray-600">{{ post.author_username }}</span>
         </div>
@@ -44,6 +44,9 @@
           </span>
           <span class="text-xs text-gray-400 flex items-center gap-1">
             💬 {{ post.comments_count || 0 }}
+          </span>
+          <span class="text-xs text-gray-400 flex items-center gap-1">
+            ❤️ {{ post.like_count || 0 }}
           </span>
         </n-space>
       </div>
@@ -74,4 +77,8 @@ const getSummary = (content) => {
   return text.length > 100 ? text.substring(0, 100) + '...' : text
 }
 
+
+const mounted = onMounted(() => {
+  console.log('ArticleCard mounted with post:', props.post)
+})
 </script>

@@ -10,6 +10,7 @@
       :date="post.date"
       :viewCount="post.viewCount"
       :likeCount="post.likeCount"
+      :avatar_url="post.avatar_url"
       :isLiked="post.isLiked"
     />
     
@@ -54,6 +55,7 @@ const fetchPosts = async () => {
       id: item.blog_id,             
       title: item.title,
       author: item.author_username, 
+      avatar_url: item.avatar_url || '',
       tags: item.tags || [],
       date: item.created_at,        
       viewCount: item.view_count || 0,

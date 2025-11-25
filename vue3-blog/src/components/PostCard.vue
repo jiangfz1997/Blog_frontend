@@ -4,8 +4,17 @@
     @click="getBlogDetail"
   >
     <div class="flex items-center mb-3">
-      <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm mr-2">
-        {{ author ? author.charAt(0).toUpperCase() : 'U' }}
+      <img 
+        v-if="avatar_url" 
+        :src="avatar_url" 
+        alt="User Avatar"
+        class="w-8 h-8 rounded-full object-cover mr-2"
+      >
+
+      <div 
+          v-else
+          class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm mr-2">
+          {{ author ? author.charAt(0).toUpperCase() : 'U' }}
       </div>
       <div class="flex flex-col">
         <span class="text-sm font-medium text-gray-800 leading-none mb-1">
@@ -85,6 +94,10 @@ const props = defineProps({
   author: {
     type: String,
     default: 'Unknown'
+  },
+  avatar_url: {
+    type: String,
+    default: ''
   },
   tags: {
     type: Array,

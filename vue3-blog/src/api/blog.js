@@ -4,11 +4,12 @@ export async function getBlog(id) {
   return await api.get(`/blogs/${id}`)
 }
 
-export async function getBlogListByUserId(id, page=1, limit=10) {
+export async function getBlogListByUserId(id, page=1, limit=10, excludeId=null) {
   return await api.get(`/blogs/author/${id}`, {
     params: {
       page,
-      limit
+      size: limit,
+      exclude_blog_id: excludeId
     }
   })
 }

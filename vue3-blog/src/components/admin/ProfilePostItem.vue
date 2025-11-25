@@ -41,7 +41,7 @@
            ❤️ {{ post.like_count || 0 }}
         </span>
         <span class="flex items-center gap-1">
-          💬 {{ post.comments_count || 0 }}
+          💬 {{ post.comment_count || 0 }}
         </span>
       </div>
     </div>

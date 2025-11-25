@@ -55,7 +55,7 @@ export const useUserStore = defineStore('user', {
         
         // Adjust based on your actual backend response structure
         this.user = data.user ?? data
-        
+        console.log("Logged in user data:", this.user)
         return this.user
       } catch (err) {
         const msg = extractErrorMessage(err)
@@ -69,13 +69,13 @@ export const useUserStore = defineStore('user', {
     /**
      * Handle user registration
      */
-    async register({ username, email, password }) {
+    async register({ username, email, password, avatar_url }) {
       this.loading = true
       this.error = null
 
       try {
         // API automatically unwraps the response, so 'data' is the payload
-        const data = await api.post('/users/register', { username, email, password })
+        const data = await api.post('/users/register', { username, email, password, avatar_url })
         
         this.user = data.user ?? data
         

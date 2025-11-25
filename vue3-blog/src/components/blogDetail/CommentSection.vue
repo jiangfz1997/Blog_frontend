@@ -3,16 +3,19 @@
     <h2 class="text-xl font-semibold mb-6">Comments ({{ commentsData.total }})</h2>
 
     <div class="flex gap-4 mb-8">
-      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=CurrentUser" class="w-12 h-12 rounded-full bg-gray-100" alt="My Avatar"/>
+      <img v-if="userStore.user?.avatar_url"
+                    :src="userStore.user.avatar_url" class="w-12 h-12 rounded-full bg-gray-100" alt="My Avatar"/>
+
       <div class="flex-1">
         <textarea
           v-model="newCommentContent"
-          placeholder="Add to the discussion..."
+          :placeholder="userStore.user?.id ? 'Add to the discussion...' : 'Please login to comment'"
+          :disabled="!userStore.user?.id"
           rows="3"
           class="w-full bg-gray-100 border border-transparent rounded-lg p-3 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none text-sm"
         ></textarea>
         <div class="flex justify-end mt-2">
-          <button @click="postRootComment" :disabled="!newCommentContent.trim()" class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-6 py-2 rounded-full disabled:opacity-50 transition-colors font-medium">
+          <button @click="postRootComment" :disabled="!userStore.user?.id ||!newCommentContent.trim()" class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-6 py-2 rounded-full disabled:opacity-50 transition-colors font-medium">
             Comment
           </button>
         </div>
@@ -24,7 +27,7 @@
         
         <div class="flex gap-4 group">
           <div class="flex-shrink-0 cursor-pointer">
-            <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${rootComment.author_username}`" alt="avatar" class="w-10 h-10 rounded-full border border-gray-100"/>
+            <img :src="rootComment.author_avatar" alt="avatar" class="w-10 h-10 rounded-full border border-gray-100"/>
           </div>
 
           <div class="flex-1">
@@ -38,10 +41,17 @@
               <button 
                 @click="openReplyBox(rootComment, rootComment.id)" 
                 class="hover:text-blue-500 cursor-pointer transition-colors"
+                v-if="userStore.user?.id"
               >
                 Reply
               </button>
-              <button class="hover:text-red-500 cursor-pointer transition-colors">Like</button>
+              <!-- <button class="hover:text-red-500 cursor-pointer transition-colors" :disabled="!userStore.user?.id">Like</button> -->
+              <button 
+                v-if="userStore.user?.id === rootComment.author_id"
+                @click="handleDelete(rootComment, true)"
+                class="hover:text-red-500 cursor-pointer transition-colors"
+              >Delete</button>
+
             </div>
 
             <div v-if="replyBoxState.parentId === rootComment.id" class="mb-4 animate-fade-in-down">
@@ -56,7 +66,7 @@
               </div>
               <div class="flex justify-end gap-2 mt-2">
                 <button @click="closeReplyBox" class="text-gray-500 text-xs hover:text-gray-700 px-3 py-1">Cancel</button>
-                <button @click="postSubComment" class="bg-blue-500 text-white text-xs px-4 py-1.5 rounded-full hover:bg-blue-600">Reply</button>
+                <button class="bg-blue-500 text-white text-xs px-4 py-1.5 rounded-full hover:bg-blue-600">Reply</button>
               </div>
             </div>
 
@@ -66,7 +76,7 @@
             >
               <div v-for="reply in rootComment.replies" :key="reply.id" class="text-sm group/reply">
                 <div class="flex items-start gap-2">
-                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.author_username}`" class="w-6 h-6 rounded-full mt-0.5"/>
+                  <img :src="reply.author_avatar" class="w-6 h-6 rounded-full mt-0.5"/>
                   
                   <div class="flex-1">
                     <span class="text-gray-800">
@@ -83,11 +93,19 @@
                       <span>{{ formatDate(reply.created_at) }}</span>
                       <button 
                         @click="openReplyBox(reply, rootComment.id)"
+                        v-if="userStore.user?.id"
                         class="hover:text-blue-500 cursor-pointer hidden group-hover/reply:block"
                       >
                         Reply
                       </button>
-                      <button class="hover:text-red-500 cursor-pointer hidden group-hover/reply:block">Like</button>
+                      <!-- <button class="hover:text-red-500 cursor-pointer hidden group-hover/reply:block">Like</button> -->
+                      <button 
+                          v-if="userStore.user?.id === reply.author_id"
+                          @click="handleDelete(reply, true)"
+                          class="hover:text-red-500 cursor-pointer hidden group-hover/reply:block"
+                        > Delete
+                      </button>
+                      
                     </div>
 
                     <div v-if="replyBoxState.parentId === reply.id" class="mt-2 ml-2">
@@ -110,7 +128,7 @@
                 </div>
               </div>
               
-              <div v-if="rootComment.replies_has_next" class="text-xs text-blue-500 cursor-pointer pt-1 hover:underline">
+              <div v-if="rootComment.replies_has_next" @click="loadMoreReplies(rootComment)" class="text-xs text-blue-500 cursor-pointer pt-1 hover:underline">
                 View more replies ({{ rootComment.replies_total }} total)
               </div>
             </div>
@@ -128,8 +146,8 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { postComment, getComments, formatDate } from '@/api/comments.js'
-
+import { postComment, getComments, formatDate, getMoreReplies, deleteComment } from '@/api/comments.js'
+import { useUserStore } from '@/store/userStore'
 const props = defineProps({
   blogId: {
     type: String,
@@ -139,7 +157,7 @@ const props = defineProps({
 const commentsData = ref({items: [], total: 0})
 const loading = ref(false)
 const newCommentContent = ref('')
-
+const userStore = useUserStore()
 const replyBoxState = ref({
   parentId: null, 
   rootId: null,   
@@ -151,9 +169,9 @@ const fetchComments = async () => {
   
   loading.value = true
   try {
-    // Use template literal to inject the blogId
-    // Assuming your API is GET /comments?blog_id=...
+
     const data = await getComments(props.blogId, 1, 20)
+    console.log('Fetched comments:', data)
     commentsData.value = data
   } catch (error) {
     console.error('Failed to load comments:', error)
@@ -163,13 +181,11 @@ const fetchComments = async () => {
 }
 
 const openReplyBox = (comment, rootId) => {
-  // If clicking the same button, toggle it off
   if (replyBoxState.value.parentId === comment.id) {
     closeReplyBox()
     return
   }
   
-  // Set state to show the box under the specific comment
   replyBoxState.value = {
     parentId: comment.id,
     rootId: rootId, 
@@ -183,14 +199,14 @@ const closeReplyBox = () => {
 }
 
 const postSubComment = async () => {
+  console.log('Reply button clicked!')
   if (!replyBoxState.value.content.trim()) return
 
   const { parentId, rootId, content } = replyBoxState.value
-
+  console.log('Posting reply to comment ID:', parentId, 'under root ID:', rootId)
   try {
     const newReply = await postComment(props.blogId, content, parentId)
     
-    // UI Optimistic Update: Find the root comment and push the new reply
     const rootComment = commentsData.value.items.find(item => item.id === rootId)
     if (rootComment) {
       if (!rootComment.replies) rootComment.replies = []
@@ -200,11 +216,57 @@ const postSubComment = async () => {
     }
 
     closeReplyBox()
-    
+    await fetchComments()
   } catch (error) {
     console.error('Error posting reply:', error)
   }
 }
+
+const loadMoreReplies = async (rootComment) => {
+  if (rootComment.isLoadingMore) return
+
+  rootComment.isLoadingMore = true
+  
+  try {
+    const currentPage = rootComment.replies_page || 1
+    const nextPage = currentPage + 1
+    const size = rootComment.replies_size || 5 
+    const data = await getMoreReplies(rootComment.id, nextPage, size)
+    
+    if (data && data.items) {
+      rootComment.replies.push(...data.items)
+      
+      rootComment.replies_page = nextPage
+
+      rootComment.replies_has_next = data.has_next
+    }
+  } catch (error) {
+    console.error('Failed to load more replies:', error)
+  } finally {
+    rootComment.isLoadingMore = false
+  }
+}
+
+const handleDelete = async (comment, isRoot, parentComment = null) => {
+  if (!confirm('Are you sure you want to delete this comment?')) return
+
+  try {
+    const res = await deleteComment(comment.id, props.blogId)
+    
+    if (isRoot) {
+        commentsData.value.items = commentsData.value.items.filter(c => c.id !== comment.id)
+        commentsData.value.total--
+    } else if (parentComment) {
+        parentComment.replies = parentComment.replies.filter(r => r.id !== comment.id)
+        parentComment.replies_total--
+    }
+    
+    await fetchComments()
+  } catch (error) {
+    console.error('Delete failed', error)
+  }
+}
+
 
 onMounted(() => {
   fetchComments()

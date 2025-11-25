@@ -27,7 +27,7 @@
 import { computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSearch } from '@/composables/useSearch'
-import ArticleCard from '@/components/ArticleCard.vue'
+import ArticleCard from '@/components/card/ArticleCard.vue'
 
 const route = useRoute()
 const { results, loading, executeSearch } = useSearch()

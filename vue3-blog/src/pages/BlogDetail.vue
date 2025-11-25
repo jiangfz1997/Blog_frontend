@@ -5,7 +5,17 @@
         <h1 class="text-3xl font-bold mb-4">{{ post.title }}</h1>
         <div class="flex items-center justify-between mb-6 text-gray-500 text-sm">
           <div class="flex items-center space-x-4">
-            <span class="font-medium text-gray-700">by {{ post.author }}</span>
+            <router-link 
+              v-if="post.author_id"
+              :to="`/user/${post.author_id}`" 
+              class="font-medium text-gray-700 hover:underline cursor-pointer"
+            >
+              by {{ post.author }}
+            </router-link>
+
+            <span v-else class="font-medium text-gray-700">
+              by {{ post.author }}
+            </span>           
             <span>{{ formatDate(post.createdAt) }}</span>
           </div>
 
@@ -58,7 +68,7 @@
         <AuthorProfile
         :name="author.name"
         :bio="author.bio"
-        :avatar="author.avatar"
+        :avatar_url="author.avatar_url"
       />
        <AuthorMorePosts :author="author.name" :posts="morePosts" />
     </template>
@@ -68,7 +78,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getBlog, toggleLikeBlog } from '@/api/blog.js'
+import { getBlog, toggleLikeBlog, getBlogListByUserId } from '@/api/blog.js'
 import { getUserProfile } from '@/api/user.js'
 import { MdPreview } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
@@ -92,6 +102,7 @@ onMounted(async () => {
     id: blogData.id,
     title: blogData.title,
     author: blogData.author_username,
+    author_id: blogData.author_id,
     content: blogData.content,
     viewCount: blogData.view_count,
     likeCount: blogData.like_count,
@@ -104,14 +115,11 @@ onMounted(async () => {
   author.value = {
     name: authorData.username,
     bio: authorData.bio,
-    avatar: authorData.avatar
+    avatar_url: authorData.avatar_url
   }
-
-  morePosts.value = [
-    { id: 2, title: 'Understanding Pinia in 10 Minutes', date: 'Nov 10, 2025' },
-    { id: 3, title: 'Deploying Vue Apps with Docker', date: 'Nov 8, 2025' },
-    { id: 4, title: 'Building REST APIs with FastAPI', date: 'Nov 6, 2025' },
-  ]
+  console.log('Author data set to:', author.value)
+  morePosts.value = await getBlogListByUserId(blogData.author_id, 1, 5, blogData.id)
+  
 })
 
 const formatDate = (dateString) => {
