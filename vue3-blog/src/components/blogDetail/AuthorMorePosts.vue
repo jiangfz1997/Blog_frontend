@@ -17,7 +17,7 @@
           v-for="post in postItems"
           :key="post.id"
           class="group flex flex-col p-3 rounded-lg cursor-pointer hover:bg-blue-50/50 transition-colors duration-200"
-          @click="goToDetail(post.id)"
+          @click.stop="goToDetail(post.id)"
         >
           <h3 class="text-sm font-semibold text-gray-700 group-hover:text-blue-600 transition-colors leading-snug mb-2 line-clamp-2">
             {{ post.title }}
@@ -75,6 +75,7 @@ const postItems = computed(() => {
 })
 
 const goToDetail = (id) => {
+  console.log('Navigating to post detail:', id)
   router.push(`/blog/${id}`)
 }
 

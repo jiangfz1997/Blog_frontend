@@ -39,7 +39,7 @@
         type="button"
         class="flex items-center gap-1 pl-4 pr-2 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 focus:outline-none"
       >
-        <span>{{ searchType === 'keyword' ? 'Article' : 'Author' }}</span>
+        <span>{{ searchType === 'posts' ? 'Article' : 'Author' }}</span>
         
         <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />

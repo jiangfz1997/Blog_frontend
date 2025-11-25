@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getBlog, toggleLikeBlog, getBlogListByUserId } from '@/api/blog.js'
 import { getUserProfile } from '@/api/user.js'
@@ -92,8 +92,20 @@ const route = useRoute()
 const post = ref({})
 const author = ref({})
 const morePosts = ref([])
-
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId) fetchBlogDetail()
+  }
+)
 onMounted(async () => {
+  const blogId = route.params.id
+  if (blogId) {
+    await fetchBlogDetail()
+  }
+  
+})
+const fetchBlogDetail = async () => {
   const id = route.params.id
   const blogData = await getBlog(id)
   console.log('Loaded blog data:', blogData)
@@ -119,8 +131,9 @@ onMounted(async () => {
   }
   console.log('Author data set to:', author.value)
   morePosts.value = await getBlogListByUserId(blogData.author_id, 1, 5, blogData.id)
-  
-})
+
+}
+
 
 const formatDate = (dateString) => {
   if (!dateString) return ''
