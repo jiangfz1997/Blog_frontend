@@ -45,7 +45,7 @@
               >
                 Reply
               </button>
-              <!-- <button class="hover:text-red-500 cursor-pointer transition-colors" :disabled="!userStore.user?.id">Like</button> -->
+              <!-- <button class="hover:text-red-500 cursor-pointer transition-colors">Like</button> -->
               <button 
                 v-if="userStore.user?.id === rootComment.author_id"
                 @click="handleDelete(rootComment, true)"
@@ -66,7 +66,7 @@
               </div>
               <div class="flex justify-end gap-2 mt-2">
                 <button @click="closeReplyBox" class="text-gray-500 text-xs hover:text-gray-700 px-3 py-1">Cancel</button>
-                <button class="bg-blue-500 text-white text-xs px-4 py-1.5 rounded-full hover:bg-blue-600">Reply</button>
+                <button @click="postSubComment" class="bg-blue-500 text-white text-xs px-4 py-1.5 rounded-full hover:bg-blue-600">Reply</button>
               </div>
             </div>
 
@@ -93,7 +93,7 @@
                       <span>{{ formatDate(reply.created_at) }}</span>
                       <button 
                         @click="openReplyBox(reply, rootComment.id)"
-                        v-if="userStore.user?.id"
+                                                v-if="userStore.user?.id"
                         class="hover:text-blue-500 cursor-pointer hidden group-hover/reply:block"
                       >
                         Reply
@@ -199,11 +199,9 @@ const closeReplyBox = () => {
 }
 
 const postSubComment = async () => {
-  console.log('Reply button clicked!')
   if (!replyBoxState.value.content.trim()) return
 
   const { parentId, rootId, content } = replyBoxState.value
-  console.log('Posting reply to comment ID:', parentId, 'under root ID:', rootId)
   try {
     const newReply = await postComment(props.blogId, content, parentId)
     
