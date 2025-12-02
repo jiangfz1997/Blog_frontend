@@ -11,6 +11,7 @@
       :viewCount="post.viewCount"
       :likeCount="post.likeCount"
       :avatar_url="post.avatar_url"
+      :comment_count="post.comment_count"
       :isLiked="post.isLiked"
     />
     
@@ -60,7 +61,8 @@ const fetchPosts = async () => {
       date: item.created_at,        
       viewCount: item.view_count || 0,
       likeCount: item.like_count || 0, 
-      isLiked: item.is_liked || false 
+      isLiked: item.is_liked || false,
+      comment_count: item.comment_count || 0
     }))
 
     posts.value.push(...mappedItems)

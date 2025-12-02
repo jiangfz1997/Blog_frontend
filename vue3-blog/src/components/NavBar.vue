@@ -8,7 +8,7 @@
              <span class="text-white font-bold text-lg">B</span>
           </div>
           <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-600 tracking-tight">
-            Blog_Title
+            DevBlog
           </h1>
         </div>
 
